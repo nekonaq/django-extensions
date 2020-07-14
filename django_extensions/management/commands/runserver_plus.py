@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import base64
 import logging
 import os
 import re
@@ -385,9 +386,20 @@ def set_werkzeug_log_color():
     _orig_log = WSGIRequestHandler.log
 
     def werk_log(self, type, message, *args):
+        # size ("-" で表示する部分) に SSL のクライアント情報を表示
+        args = args[:-1] + (self.headers.get('X-SSL-CLIENT-S-DN', '-'),)
+
+        # authorization からユーザー名を取り出す
+        authinfo = self.headers.get('authorization', '').split(' ')
+        if authinfo[0] == 'Basic':
+            authuser = base64.b64decode(authinfo[1]).decode().split(':')[0] or '-'
+        else:
+            authuser = '-'
+
         try:
-            msg = '%s - - [%s] %s' % (
+            msg = '%s - %s [%s] %s' % (
                 self.address_string(),
+                authuser,
                 self.log_date_time_string(),
                 message % args,
             )
